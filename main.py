@@ -1,8 +1,15 @@
+from kivy.config import Config
+Config.set('graphics', 'width', '1200')
+Config.set('graphics', 'height', '600')
+
+
 from kivy.app import App
 from kivy.uix.widget import Widget
+from kivy.utils import platform
 from kivy.properties import NumericProperty, Clock
 from kivy.graphics.context_instructions import Color
 from kivy.graphics.vertex_instructions import Line
+from kivy.core.window import Window
 
 class MainWidget(Widget):
     perspective_point_x = NumericProperty(0)
@@ -19,11 +26,30 @@ class MainWidget(Widget):
     current_offset_y = 0
     SPEED = 5
 
+    speed_x = 40
+    current_offset_x = 0
+
+    current_speed_x = 0
+
     def __init__(self, **kwargs):
         super(MainWidget, self).__init__(**kwargs)
         self.init_vertical_lines()
         self.init_horizontal_lines()
         Clock.schedule_interval(self.update, 1/60) # 60 fps
+
+        if self.is_desktop(): # if we use desktop, init keyboard
+            self._keyboard = Window.request_keyboard(self.keyboard_closed, self)
+            self._keyboard.bind(on_key_down=self.on_keyboard_down)
+            self._keyboard.bind(on_key_up=self.on_keyboard_up)
+
+    def keyboard_closed(self):
+        self._keyboard.unbind(on_key_down=self._on_keyboard_down)
+        self._keyboard = None
+    
+    def is_desktop(self):
+        if platform in ('linux', 'win', 'macosx'):
+            return True
+        return False
     
     def on_size(self, *args):
         pass
@@ -51,7 +77,7 @@ class MainWidget(Widget):
         spacing = self.V_LINES_SPACING * self.width # 10% of screen width
         offset = -int(self.V_NB_LINES/2) + 0.5
         for i in range(0, self.V_NB_LINES):
-            line_x = int(central_line_x + offset * spacing)
+            line_x = int(central_line_x + offset * spacing + self.current_offset_x)
             x1, y1 = self.transform(line_x, 0)
             x2, y2 = self.transform(line_x, self.height)
             self.vertical_lines[i].points = [x1, y1, x2, y2]
@@ -69,8 +95,8 @@ class MainWidget(Widget):
         central_line_x = self.width/2
         spacing = self.V_LINES_SPACING * self.width # 10% of screen width
         offset = -int(self.V_NB_LINES/2) + 0.5
-        xmin = central_line_x + offset * spacing
-        xmax = central_line_x - offset * spacing
+        xmin = central_line_x + offset * spacing + self.current_offset_x
+        xmax = central_line_x - offset * spacing + self.current_offset_x
         spacing_y = self.H_LINES_SPACING * self.height
 
         for i in range(0, self.V_NB_LINES):
@@ -104,14 +130,41 @@ class MainWidget(Widget):
 
         return int(tr_x), int(tr_y)
     
+    def on_keyboard_down(self, keyboard, keycode, text, modifiers):
+        if keycode[1] == 'left':
+            self.current_speed_x = self.speed_x
+        elif keycode[1] == 'right':
+            self.current_speed_x = -self.speed_x
+        return True
+
+    def on_keyboard_up(self, keyboard, keycode):
+        self.current_speed_x = 0
+        
+    
+    def on_touch_down(self, touch): # to mobile phone
+        if touch.x < self.width/2: # slide to the left
+            self.current_speed_x = self.speed_x
+            print("<-")
+        else:
+            self.current_speed_x = -self.speed_x # slide to the right
+            print("->")
+    
+    def on_touch_up(self, touch): 
+        print("UP")
+        self.current_speed_x = 0
+    
+    
     def update(self, dt):
+        time_factor = dt * 60    # try to keep the same time on any screen, mobile or desktop
         self.update_vertical_lines()
         self.update_horizontal_lines()
-        self.current_offset_y += self.SPEED
+        self.current_offset_y += self.SPEED * time_factor
 
         spacing_y = self.H_LINES_SPACING * self.height
         if self.current_offset_y >= spacing_y:
             self.current_offset_y -= spacing_y
+        
+        self.current_offset_x += self.current_speed_x * time_factor
 
 
 
