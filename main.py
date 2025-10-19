@@ -67,8 +67,19 @@ class MainWidget(Widget):
                 self.tiles.append(Quad())
     
     def generate_tiles_coordinates(self):
-        for i in range(0, self.NB_TILES):
-            self.tiles_coordinates.append((0, i))
+        last_y = 1
+
+        for i in range(len(self.tiles_coordinates)-1, -1, -1): # delete last coordinate if it less than the loop
+            if self.tiles_coordinates[i][1] < self.current_y_loop:
+                del self.tiles_coordinates[i]
+        
+        if (len(self.tiles_coordinates)) > 0:
+            last_coordiante = self.tiles_coordinates[-1]
+            last_y = last_coordiante[1]+1
+
+        for i in range(len(self.tiles_coordinates), self.NB_TILES): # add new cordinate when the last one is deleted
+            self.tiles_coordinates.append((0, last_y))
+            last_y += 1
 
     def init_vertical_lines(self):
         with self.canvas:
@@ -152,6 +163,7 @@ class MainWidget(Widget):
         if self.current_offset_y >= spacing_y:
             self.current_offset_y -= spacing_y
             self.current_y_loop += 1
+            self.generate_tiles_coordinates()
         
         self.current_offset_x += self.current_speed_x * time_factor
 
