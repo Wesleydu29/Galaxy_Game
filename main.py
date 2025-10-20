@@ -48,6 +48,8 @@ class MainWidget(Widget):
     SHIP_BASE_Y = 0.04
     ship = None
 
+    ship_coodinates = [(0, 0), (0, 0), (0, 0)]
+
     def __init__(self, **kwargs):
         super(MainWidget, self).__init__(**kwargs)
         self.init_vertical_lines()
@@ -80,10 +82,36 @@ class MainWidget(Widget):
         half_width = self.SHIP_WIDTH * self.width / 2
         ship_height = self.SHIP_HEIGHT * self.height
 
-        x1, y1 = self.transform(center_x - half_width, base_y)
-        x2, y2 = self.transform(center_x, base_y + ship_height)
-        x3, y3 = self.transform(center_x + half_width, base_y)
+        self.ship_coodinates[0] = (center_x - half_width, base_y)
+        self.ship_coodinates[1] = (center_x, base_y + ship_height)
+        self.ship_coodinates[2] = (center_x + half_width, base_y)
+
+        x1, y1 = self.transform(*self.ship_coodinates[0]) # expend argument with *
+        x2, y2 = self.transform(*self.ship_coodinates[1])
+        x3, y3 = self.transform(*self.ship_coodinates[2])
         self.ship.points = [x1, y1, x2, y2, x3, y3]
+
+    def check_ship_collisions(self):
+        for i in range(0, len(self.tiles_coordinates)):
+            ti_x, ti_y = self.tiles_coordinates[i]
+            if ti_y > self.current_y_loop +1:
+                return False
+            if self.check_ship_collision_with_tile(ti_x, ti_y):
+                return True
+        return False
+
+    def check_ship_collision_with_tile(self, ti_x, ti_y):
+        xmin, ymin = self.get_tile_coordinates(ti_x, ti_y)
+        xmax, ymax = self.get_tile_coordinates(ti_x+1, ti_y+1)
+
+        for i in range(0, 3):
+            px, py = self.ship_coodinates[i]
+            if xmin <= px <= xmax and ymin <= py <= ymax:
+                return True
+        return False
+
+
+
 
     def init_tiles(self):
         with self.canvas:
@@ -226,6 +254,9 @@ class MainWidget(Widget):
         
         speed_x = self.current_speed_x * self.width / 100
         self.current_offset_x += speed_x * time_factor
+
+        if not self.check_ship_collisions():
+            print("Game Over")
 
 
 class GalaxyApp(App):
