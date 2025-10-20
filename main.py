@@ -7,7 +7,7 @@ from kivy.app import App
 from kivy.uix.widget import Widget
 from kivy.uix.relativelayout import RelativeLayout
 from kivy.utils import platform
-from kivy.properties import NumericProperty, ObjectProperty
+from kivy.properties import NumericProperty, ObjectProperty, StringProperty
 from kivy.clock import Clock
 from kivy.graphics.context_instructions import Color
 from kivy.graphics.vertex_instructions import Line
@@ -57,6 +57,11 @@ class MainWidget(RelativeLayout):
     state_game_over = False
     state_game_started = False
 
+    menu_title = StringProperty("G   A   L   A   X   Y")
+    menu_button_title = StringProperty("START")
+
+    score_txt = StringProperty()
+
     ship_coodinates = [(0, 0), (0, 0), (0, 0)]
 
     def __init__(self, **kwargs):
@@ -81,6 +86,7 @@ class MainWidget(RelativeLayout):
         self.current_speed_x = 0
 
         self.tiles_coordinates = []
+        self.score_txt = f"Score: {str(self.current_y_loop)}"
         self.pre_fill_tiles_coodinates()
         self.generate_tiles_coordinates()
         self.state_game_over = False
@@ -271,6 +277,7 @@ class MainWidget(RelativeLayout):
             while self.current_offset_y >= spacing_y:
                 self.current_offset_y -= spacing_y
                 self.current_y_loop += 1
+                self.score_txt = f"Score: {str(self.current_y_loop)}"
                 self.generate_tiles_coordinates()
             
             speed_x = self.current_speed_x * self.width / 100
@@ -278,6 +285,8 @@ class MainWidget(RelativeLayout):
 
         if not self.check_ship_collisions() and not self.state_game_over:
             self.state_game_over = True
+            self.menu_title = "G  A  M  E    O  V  E  R"
+            self.menu_button_title = "RESTART"
             self.menu_widget.opacity = 1
             print("Game Over")
     
