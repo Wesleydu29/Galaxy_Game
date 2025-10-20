@@ -5,19 +5,25 @@ Config.set('graphics', 'height', '600')
 
 from kivy.app import App
 from kivy.uix.widget import Widget
+from kivy.uix.relativelayout import RelativeLayout
 from kivy.utils import platform
-from kivy.properties import NumericProperty
+from kivy.properties import NumericProperty, ObjectProperty
 from kivy.clock import Clock
 from kivy.graphics.context_instructions import Color
 from kivy.graphics.vertex_instructions import Line
 from kivy.graphics import Quad, Triangle
 from kivy.core.window import Window
 import random
+from kivy.lang import Builder
 
-class MainWidget(Widget):
+Builder.load_file("menu.kv")
+
+class MainWidget(RelativeLayout):
 
     from transforms import transform, transform_2D, transform_perspective
     from user_actions import keyboard_closed, on_keyboard_down, on_keyboard_up, on_touch_down, on_touch_up
+
+    menu_widget = ObjectProperty()
 
     perspective_point_x = NumericProperty(0)
     perspective_point_y = NumericProperty(0)
@@ -48,6 +54,9 @@ class MainWidget(Widget):
     SHIP_BASE_Y = 0.04
     ship = None
 
+    state_game_over = False
+    state_game_started = False
+
     ship_coodinates = [(0, 0), (0, 0), (0, 0)]
 
     def __init__(self, **kwargs):
@@ -56,14 +65,25 @@ class MainWidget(Widget):
         self.init_horizontal_lines()
         self.init_tiles()
         self.init_ship()
-        self.pre_fill_tiles_coodinates()
-        self.generate_tiles_coordinates()
+        self.reset_game()
+        
         Clock.schedule_interval(self.update, 1/60) # 60 fps
 
         if self.is_desktop(): # if we use desktop, init keyboard
             self._keyboard = Window.request_keyboard(self.keyboard_closed, self)
             self._keyboard.bind(on_key_down=self.on_keyboard_down)
             self._keyboard.bind(on_key_up=self.on_keyboard_up)
+
+    def reset_game(self):
+        self.current_offset_y = 0
+        self.current_offset_x = 0
+        self.current_y_loop = 0
+        self.current_speed_x = 0
+
+        self.tiles_coordinates = []
+        self.pre_fill_tiles_coodinates()
+        self.generate_tiles_coordinates()
+        self.state_game_over = False
 
     
     def is_desktop(self):
@@ -243,20 +263,28 @@ class MainWidget(Widget):
         self.update_tiles()
         self.update_ship()
 
-        speed_y = self.SPEED * self.height / 100
-        self.current_offset_y += speed_y * time_factor
+        if not self.state_game_over and self.state_game_started:
+            speed_y = self.SPEED * self.height / 100
+            self.current_offset_y += speed_y * time_factor
 
-        spacing_y = self.H_LINES_SPACING * self.height
-        if self.current_offset_y >= spacing_y:
-            self.current_offset_y -= spacing_y
-            self.current_y_loop += 1
-            self.generate_tiles_coordinates()
-        
-        speed_x = self.current_speed_x * self.width / 100
-        self.current_offset_x += speed_x * time_factor
+            spacing_y = self.H_LINES_SPACING * self.height
+            while self.current_offset_y >= spacing_y:
+                self.current_offset_y -= spacing_y
+                self.current_y_loop += 1
+                self.generate_tiles_coordinates()
+            
+            speed_x = self.current_speed_x * self.width / 100
+            self.current_offset_x += speed_x * time_factor
 
-        if not self.check_ship_collisions():
+        if not self.check_ship_collisions() and not self.state_game_over:
+            self.state_game_over = True
+            self.menu_widget.opacity = 1
             print("Game Over")
+    
+    def on_menu_button(self):
+        self.reset_game()
+        self.state_game_started = True
+        self.menu_widget.opacity = 0
 
 
 class GalaxyApp(App):
